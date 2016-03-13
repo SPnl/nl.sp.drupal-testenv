@@ -1,0 +1,7 @@
+name = SP Test Environments
+description = Functionality to configure test environments based on the current production version, and fill new environments with sample data.
+version = 1.0
+core = 7.x
+package = sprbs
+dependencies[] = civicrm
+
