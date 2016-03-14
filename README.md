@@ -1,7 +1,7 @@
 nl.sp.drupal-testenv
 ====================
 
-Deze extensie gaat functionaliteit bevatten voor het opzetten en inrichten van testomgevingen voor Drupal/CiviCRM, en voor het toevoegen van fake / sample data aan die omgevingen. Gebouwd voor de SP, maar wellicht ook elders bruikbaar.
+Deze Drupal 7-module bevat functionaliteit bevatten voor het opzetten en inrichten van testomgevingen voor Drupal/CiviCRM, en voor het toevoegen van fake / sample data aan die omgevingen. Gebouwd voor de SP, maar wellicht ook elders bruikbaar.
 
 Mijn idee tot nu toe: bij nader inzien niet te ingewikkeld maken. Geen grote webinterface, geen overzichten met testomgevingen. Gebaseerd op Drush-commando's.
 Commando('s) om:
@@ -11,4 +11,4 @@ Commando('s) om:
 - In de database afhankelijk van instelling bepaalde tabellen skippen of alleen de structuur kopieren.
 - In de database bepaalde instellingen aanpassen: site-naam en evt content, directory's en URL's van CiviCRM, en scheduled jobs en mailverzending.
 - Genereren van een hoeveelheid sample data / Nederlandse fake-contacten, naar behoefte.
-
+- Codestructuur gaarne iets meer in de verte op iets objectgeorienteerds laten lijken.

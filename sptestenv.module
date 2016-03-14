@@ -1,7 +1,18 @@
 <?php
-/* --------------------------------------------------------------------------
- * nl.sp.drupal-testenv - SP Test Environments
- * Levity / Kevin Levie, kevin@levity.nl, 2016
+/** --------------------------------------------------------------------------
+ *  nl.sp.drupal-testenv - SP Test Environments
+ *  Levity / Kevin Levie, kevin@levity.nl, 2016
+ *
+ *  Drush commands and validators are defined in sptestenv.drush.inc.
+ *  All other logic is in /src/.
  * -------------------------------------------------------------------------- */
 
-
+/**
+ * Implements hook_xautoload().
+ * @param \Drupal\xautoload\Adapter\LocalDirectoryAdapter $adapter
+ */
+/**
+function sptestenv_xautoload($adapter) {
+	$adapter->add('Testenv\\', 'src/');
+}
+ */
