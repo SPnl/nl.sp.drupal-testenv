@@ -14,16 +14,21 @@ class Person extends \Faker\Provider\nl_NL\Person {
 
   public function gender() {
     $this->myGender = $this->generator->biasedNumberBetween(1, 3, 'sqrt');
+
     return $this->myGender;
   }
 
-  public function firstName() {
-    if(!empty($this->myFirstName)) {
+  public function firstName($gender = NULL) {
+    if (!empty($this->myFirstName)) {
       return $this->myFirstName;
     }
 
     if (empty($this->myGender)) {
-      $this->myGender = $this->gender();
+      if ($gender) {
+        $this->myGender = $gender;
+      } else {
+        $this->myGender = $this->gender();
+      }
     }
 
     switch ($this->myGender) {
@@ -49,8 +54,13 @@ class Person extends \Faker\Provider\nl_NL\Person {
     return $this->myLastName;
   }
 
-  public function name() {
-    return $this->firstName() . ' ' . $this->lastName();
+  public function name($gender = NULL) {
+    return $this->firstName($gender) . ' ' . $this->lastName();
+  }
+
+  public function initials($gender = NULL) {
+    $firstname = $this->firstName($gender);
+    return strtoupper(substr($firstname, 0, 1));
   }
 
 }

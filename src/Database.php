@@ -8,94 +8,103 @@ namespace Testenv;
  */
 class Database {
 
-	/**
-	 * @var \PDO $conn PDO database connection for internal usage
-	 */
-	protected static $conn;
+  /**
+   * @var array $conn Array of PDO database connections for internal usage
+   */
+  protected static $conn = [];
 
-	/**
-	 * Opens a PDO connection (ja - heb je daar problemen mee?) to execute queries directly.
-	 * @param object $params Database credentials and parameters
-	 * @param string $database Use this database
-	 * @return \PDO PDO object
-	 */
-	public static function connection(&$params, $database = NULL) {
+  /**
+   * Opens a PDO connection (ja, PDO, problemen mee?) to execute queries directly.
+   * @param string $username MySQL username
+   * @param string $password MySQL password
+   * @param string $database Database name
+   * @return \PDO PDO object
+   */
+  public static function connection($username, $password, $database = NULL) {
 
-		if (empty(static::$conn)) {
-			$dsn = 'mysql:host=' . Config::DB_HOST . ($database ? ';dbname=' . $database : '');
-			static::$conn = new \PDO($dsn, $params->new_username, $params->new_password);
-		}
-		if ($database) {
-			static::$conn->query('USE ' . $database)->execute();
-		}
+    $keyname = !empty($database) ? $database : 'general';
+    if (empty(self::$conn[ $keyname ])) {
+      $dsn = 'mysql:host=' . Config::DB_HOST . ($database ? ';dbname=' . $database : '');
+      self::$conn[ $keyname ] = new \PDO($dsn, $username, $password);
+    }
 
-		return static::$conn;
-	}
+    return self::$conn[ $keyname ];
+  }
 
-	/**
-	 * Shared function to copy an entire database using mysqldump.
-	 * @param string $cur_dbname Current database
-	 * @param string $new_dbname Destination database
-	 * @param object $params Database credentials and settings
-	 * @return bool Result
-	 */
-	public static function copy($cur_dbname, $new_dbname, &$params) {
+  /**
+   * Shared function to copy an entire database by calling mysqldump / mysql via drush_shell_exec.
+   * @param string $cur_dbname Current database
+   * @param string $new_dbname Destination database
+   * @param object $params Database credentials and settings
+   * @return bool Result
+   */
+  public static function copy($cur_dbname, $new_dbname, &$params) {
 
-		if (!Util::isDrush()) {
-			return Util::log('TESTENV: _sptestenv_copy_database can currently only be called through Drush.', 'error');
-		}
+    if (!Util::isDrush()) {
+      return Util::log('TESTENV: Database::copy can currently only be called via Drush.', 'error');
+    }
 
-		// Dump current database to system temp directory. Dump options currently hardcoded. Probably should be escaped.
-		$dumpfile = Util::getTempDir() . DIRECTORY_SEPARATOR . 'sptestenv_copy_' . time() . '.sql';
-		$dumpcmd  = Config::MYSQLDUMP_LOCATION . " -u {$params['cur_dbuser']} -p{$params['cur_dbpass']} -f --create-options --routines --triggers --skip-events --single-transaction --max-allowed-packet=32M {$cur_dbname} > {$dumpfile}";
+    // Clean up any SQL files that may have been left in /tmp
+    drush_op_system("rm -f /tmp/sptestenv_copy_*.sql");
 
-		$dumpres = drush_shell_exec($dumpcmd, TRUE);
-		if (!$dumpres || !file_exists($dumpfile)) {
-			return Util::log("TESTENV: could not dump current database '{$cur_dbname}'.", 'error');
-		}
+    // Dump current database to system temp directory. Dump options currently hardcoded. Probably should be escaped, too.
+    $dumpfile = Util::getTempDir() . DIRECTORY_SEPARATOR . 'sptestenv_copy_' . time() . '.sql';
+    $dumpcmd = Config::MYSQLDUMP_LOCATION . " -u {$params->cur_username} -p{$params->cur_password} -f --create-options --routines --triggers --skip-events --single-transaction --max-allowed-packet=32M {$cur_dbname} > {$dumpfile}";
 
-		// Try to create new database, if it doesn't exist
-		$dbconn = self::connection($params);
-		$dbconn->query("CREATE DATABASE IF NOT EXISTS ?")->execute([1 => $new_dbname]);
+    Util::log("Dumping database '{$cur_dbname}' to {$dumpfile}...", 'ok');
+    Util::log("Calling command: '{$dumpcmd}'.\n", 'debug'); // debug only
 
-		// Try to read dumpfile
-		$readcmd = Config::MYSQL_LOCATION . "-D {$new_dbname} -u {$params['cur_dbuser']} -p{$params['cur_dbpass']} < {$dumpfile}";
-		$readres = drush_shell_exec($readcmd, TRUE);
+    $dumpres = drush_shell_exec($dumpcmd, TRUE);
+    if (!$dumpres || !file_exists($dumpfile)) {
+      return Util::log("TESTENV: could not dump current database '{$cur_dbname}'.", 'error');
+    }
 
-		// Remove dump file
-		unlink($dumpfile);
+    // Try to create new database, if it doesn't exist
+    $dbconn = self::connection($params->new_username, $params->new_password);
+    $query = $dbconn->prepare("CREATE DATABASE IF NOT EXISTS :database")->execute(['database' => $new_dbname]);
 
-		if (!$readres) {
-			return Util::log("TESTENV: could not read dump file for database '{$new_dbname}'.", 'error');
-		}
+    // Try to read dumpfile
+    $readcmd = Config::MYSQL_LOCATION . " -D {$new_dbname} -u {$params->new_username} -p{$params->new_password} -f < {$dumpfile}";
 
-		return TRUE;
-	}
+    Util::log("Importing database '{$new_dbname}' from {$dumpfile}...", 'ok');
+    Util::log("Calling command: '{$readcmd}'.\n", 'debug'); // debug only
 
-	/**
-	 * Get current Drupal and CiviCRM database names and credentials. Hostname is currently assumed to be localhost.
-	 * @param object $params Referenced object that contains database credentials and settings
-	 * @return bool Success
-	 */
-	public static function currentInfo(&$params) {
+    $readres = drush_shell_exec($readcmd, TRUE);
 
-		if(empty($params)) {
-			$params = new \StdClass;
-		}
+    // Remove dump file
+    unlink($dumpfile);
 
-		global $databases;
-		$conf   = array_shift($databases);
-		$thisdb = array_shift($conf);
-		if (empty($thisdb) || empty($thisdb['username']) || empty($thisdb['password']) || empty($thisdb['database']) || empty($thisdb['prefix']['civicrm_contact'])) {
-			return FALSE;
-		}
+    if (!$readres) {
+      return Util::log("TESTENV: could not read dump file for database '{$new_dbname}'.", 'error');
+    }
 
-		$params->cur_username = $thisdb['username'];
-		$params->cur_password = $thisdb['password'];
-		$params->cur_drupal   = $thisdb['database'];
-		$params->cur_civicrm  = $thisdb['prefix']['civicrm_contact'];
+    return TRUE;
+  }
 
-		return TRUE;
-	}
+  /**
+   * Get current Drupal and CiviCRM database names and credentials. Hostname is currently assumed to be localhost.
+   * @param object $params Referenced object that contains database credentials and settings
+   * @return bool Success
+   */
+  public static function currentInfo(&$params) {
+
+    if (empty($params) || !is_object($params)) {
+      $params = new \StdClass;
+    }
+
+    global $databases;
+    $conf = reset($databases);
+    $thisdb = reset($conf);
+    if (empty($thisdb) || empty($thisdb['username']) || empty($thisdb['password']) || empty($thisdb['database']) || empty($thisdb['prefix']['civicrm_contact'])) {
+      return FALSE;
+    }
+
+    $params->cur_username = $thisdb['username'];
+    $params->cur_password = $thisdb['password'];
+    $params->cur_drupaldb = $thisdb['database'];
+    $params->cur_cividb = preg_replace('/`(.*)`./imU', "$1", $thisdb['prefix']['civicrm_contact']);
+
+    return TRUE;
+  }
 
 }

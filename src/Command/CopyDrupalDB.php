@@ -11,99 +11,105 @@ use Testenv\Util;
  */
 class CopyDrupalDB extends Base {
 
-	/**
-	 * Copy this site's Drupal database.
-	 * @param string $cur_dbname Current database
-	 * @param string $new_dbname Destination database
-	 * @param string $copytype Copy type: 'basic' or 'full'
-	 * @param array|null $params Database credentials and settings
-	 * @return mixed Result
-	 */
-	function run($cur_dbname, $new_dbname, $copytype = 'basic', &$params = NULL) {
+  /**
+   * @var CopyDrupalDB $instance Command instance
+   */
+  protected static $instance;
 
-		// If run directly instead of through CreateNew, we'll ask for credentials here:
-		if (!isset($params->new_drupaldb)) {
-			drush_print('Please enter valid database credentials for the NEW database.');
-			$params->new_username = drush_prompt('Database username', $new_dbname);
-			$params->new_password = drush_prompt('Database password', NULL, TRUE, TRUE);
-		}
+  /**
+   * Copy this site's Drupal database.
+   * @param string $new_dbname Destination database
+   * @param string $copytype Copy type: 'basic' or 'full'
+   * @param array|null $params Database credentials and settings
+   * @return mixed Result
+   */
+  function run($new_dbname, $copytype = 'basic', &$params = NULL) {
 
-		// Copy database
-		Database::currentInfo($params);
-		if (!Database::copy($cur_dbname, $new_dbname, $params)) {
-			return Util::log('TESTENV: copying Drupal database failed.', 'error');
-		}
+    // If run directly instead of through CreateNew, we'll ask for credentials here:
+    if ($params === NULL) {
+      $params = new \StdClass;
+    }
+    if (!isset($params->new_username) || !isset($params->new_password)) {
+      drush_print("Please enter valid database credentials for the NEW database.\n-- The username and password you enter must already exist. If the destination databases don't exist yet, this user must have the CREATE privilege.");
+      $params->new_username = drush_prompt('Database username', str_replace('_drupal', '', $new_dbname));
+      $params->new_password = drush_prompt('Database password', NULL, TRUE, TRUE);
+    }
 
-		// Clean up Drupal database
-		$dbconn = Database::connection($params, $new_dbname);
-		$dbconn->beginTransaction();
+    // Copy database
+    Database::currentInfo($params);
+    if (!Database::copy($params->cur_drupaldb, $new_dbname, $params)) {
+      return Util::log('TESTENV: copying Drupal database failed.', 'error');
+    }
 
-		try {
-			// Truncate cache / session tables
-			$dbconn->exec("TRUNCATE TABLE cache");
-			$dbconn->exec("TRUNCATE TABLE sessions");
-			$dbconn->exec("TRUNCATE TABLE watchlog");
+    // Clean up Drupal database
+    $dbconn = Database::connection($params->new_username, $params->new_password, $new_dbname);
+    $dbconn->beginTransaction();
 
-			if ($copytype == 'basic') {
-				// Remove non-admin users from system tables -> dit soort SP-specifieke config maken we later nog wel variabel
+    try {
+      // Truncate cache / session tables
+      $dbconn->exec("TRUNCATE TABLE cache");
+      $dbconn->exec("TRUNCATE TABLE sessions");
+      $dbconn->exec("TRUNCATE TABLE watchlog");
 
-				// TODO hier mogen wat meer gebruikers bewaard blijven, bijv alle gebruikers die aan een CiviCRM-contact gekoppeld zijn.
-				Util::log('TESTENV: Cleaning up Drupal db, and removing most user and profile records. TODO - keep more reserved users.', 'notice');
+      if ($copytype == 'basic') {
+        // Remove non-admin users from system tables -> dit soort SP-specifieke config maken we later nog wel variabel
 
-				$dbconn->exec("DELETE FROM users WHERE uid NOT IN (" . Config::DRUPAL_KEEP_USERS . ")");
-				$dbconn->exec("DELETE FROM users_roles WHERE uid NOT IN (" . Config::DRUPAL_KEEP_USERS . ")");
-				$dbconn->exec("DELETE FROM profile WHERE uid NOT IN (" . Config::DRUPAL_KEEP_USERS . ")");
-				$dbconn->exec("DELETE FROM url_alias WHERE source LIKE 'user/%'");
+        Util::log('TESTENV: Cleaning up Drupal db, removing most user and profile records...', 'ok');
 
-				// Module tables
-				if (module_exists('oauth2_server')) {
-					$dbconn->exec("DELETE FROM oauth2_server_authorization_code WHERE uid NOT IN (" . Config::DRUPAL_KEEP_USERS . ")");
-				}
-				if (module_exists('webform')) {
-					$dbconn->exec("TRUNCATE TABLE webform_submissions");
-					$dbconn->exec("TRUNCATE TABLE webform_submitted_data");
-				}
-				if (module_exists('webform_civicrm')) {
-					$dbconn->exec("TRUNCATE TABLE webform_civicrm_submissions");
-				}
+        $dbconn->exec("DELETE FROM users WHERE uid NOT IN (" . Config::DRUPAL_KEEP_USERS . ")");
+        $dbconn->exec("DELETE FROM users_roles WHERE uid NOT IN (" . Config::DRUPAL_KEEP_USERS . ")");
+        $dbconn->exec("DELETE FROM profile WHERE uid NOT IN (" . Config::DRUPAL_KEEP_USERS . ")");
+        $dbconn->exec("DELETE FROM url_alias WHERE source LIKE 'user/%'");
 
-				if (module_exists('field')) {
-					$tables = $dbconn->query("SHOW TABLES", \PDO::FETCH_COLUMN, 0);
-					$tables->execute();
-					foreach ($tables as $table) {
-						if (strpos($table, 'field_data_') === 0) {
-							$dbconn->query("DELETE FROM {$table} WHERE entity_type = 'user' AND entity_id > " . Config::DEL_USERS_ABOVE);
-						}
-					}
-				}
-			}
+        // Module tables
+        if (module_exists('oauth2_server')) {
+          $dbconn->exec("DELETE FROM oauth2_server_authorization_code WHERE uid NOT IN (" . Config::DRUPAL_KEEP_USERS . ")");
+        }
+        if (module_exists('webform')) {
+          $dbconn->exec("TRUNCATE TABLE webform_submissions");
+          $dbconn->exec("TRUNCATE TABLE webform_submitted_data");
+        }
+        if (module_exists('webform_civicrm')) {
+          $dbconn->exec("TRUNCATE TABLE webform_civicrm_submissions");
+        }
 
-			Util::log('TESTENV: Committing clean up transaction for Drupal database.', 'ok');
-			$dbconn->commit();
+        if (module_exists('field')) {
+          $tables = $dbconn->query("SHOW TABLES", \PDO::FETCH_COLUMN, 0);
+          $tables->execute();
+          foreach ($tables as $table) {
+            if (strpos($table, 'field_data_') === 0) {
+              $dbconn->query("DELETE FROM {$table} WHERE entity_type = 'user' AND entity_id NOT IN (" . Config::DRUPAL_KEEP_USERS . ")");
+            }
+          }
+        }
+      }
 
-		} catch (\Exception $e) {
-			$dbconn->rollBack();
-			Util::log('An error occurred while cleaning up the new Drupal database. Rolling back. (' . $e->getMessage() . ')');
+      Util::log('TESTENV: Committing clean up transaction for Drupal database.', 'ok');
+      $dbconn->commit();
 
-			return FALSE;
-		}
+    } catch (\Exception $e) {
+      Util::log('An error occurred while cleaning up the new Drupal database. Rolling back. (' . $e->getMessage() . ')', 'error');
+      $dbconn->rollBack();
 
-		return TRUE;
-	}
+      return FALSE;
+    }
 
-	/**
-	 * Validate arguments
-	 * @param string $destination Destination directory
-	 * @param string $copytype Copy type
-	 * @return bool Is valid
-	 */
-	public function validate($destination = '', $copytype = 'basic') {
-		if (empty($destination)) {
-			return drush_set_error('DB_EMPTY', 'TESTENV: No destination database specified.');
-		}
-		if (!empty($type) && !in_array($type, ['basic', 'full'])) {
-			return drush_set_Error('DB_INVALIDTYPE', 'TESTENV: Invalid copy type, should be \'basic\' or \'full\'.');
-		}
-	}
+    return TRUE;
+  }
+
+  /**
+   * Validate arguments
+   * @param string $new_dbname Destination database
+   * @param string $copytype Copy type
+   * @return bool Is valid
+   */
+  public function validate($new_dbname = '', $copytype = 'basic') {
+    if (empty($new_dbname)) {
+      return drush_set_error('DB_EMPTY', 'TESTENV: No destination database specified.');
+    }
+    if (!empty($type) && !in_array($type, ['basic', 'full'])) {
+      return drush_set_Error('DB_INVALIDTYPE', 'TESTENV: Invalid copy type, should be \'basic\' or \'full\'.');
+    }
+  }
 
 }

@@ -24,6 +24,9 @@ class Util {
 	 * @return mixed
 	 */
 	public static function log($string, $type = 'ok') {
+		if(is_array($string)) {
+			$string = print_r($string, true);
+		}
 		if (static::isDrush()) {
 			return drush_log($string, $type);
 		} else {
@@ -47,6 +50,7 @@ class Util {
 
 	/**
 	 * Get site record by directory name. Used for drush_invoke_process calls.
+   * @param string $dir Drupal root directory
 	 * @return array Site record
 	 */
 	public static function getSiteRecord($dir) {
@@ -54,7 +58,9 @@ class Util {
 			define('DRUSH_VERBOSE', TRUE);
 		}
 		return [
+      '#name' => 'newenv',
 			'root' => $dir,
+      'url' => 'https://civicrmacc.sp.nl',
 			'v'    => DRUSH_VERBOSE,
 		];
 	}

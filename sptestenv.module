@@ -8,11 +8,6 @@
  * -------------------------------------------------------------------------- */
 
 /**
- * Implements hook_xautoload().
- * @param \Drupal\xautoload\Adapter\LocalDirectoryAdapter $adapter
- */
-/**
-function sptestenv_xautoload($adapter) {
-	$adapter->add('Testenv\\', 'src/');
-}
+ * Function to implement hook_xautoload(). Not currently needed - we're loading Xautoload in the Drush init function.
+ * function sptestenv_xautoload($adapter) { $adapter->add('Testenv\\', 'src/'); }
  */

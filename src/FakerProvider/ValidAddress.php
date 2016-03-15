@@ -9,7 +9,7 @@ class ValidAddress extends \Faker\Provider\Base {
   public function initialize() {
     if (empty($this->pcrow)) {
       // Fetch a random row from the postcode database
-      $dao = CRM_Core_DAO::executeQuery("SELECT * FROM civicrm_postcodenl ORDER BY RAND() LIMIT 1");
+      $dao = \CRM_Core_DAO::executeQuery("SELECT * FROM civicrm_postcodenl ORDER BY RAND() LIMIT 1");
       $this->pcrow = $dao->getDatabaseResult()->fetchRow(DB_DATAOBJECT_FETCHMODE_ASSOC);
     }
   }
