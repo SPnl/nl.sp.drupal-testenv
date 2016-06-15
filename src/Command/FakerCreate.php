@@ -10,13 +10,13 @@ use Testenv\FakerProvider\ValidAddress;
 use Testenv\Util;
 
 /**
- * Class FakerData
+ * Class FakerCreate
  * @package Testenv\Command
  */
-class FakerData extends Base {
+class FakerCreate extends BaseCommand {
 
   /**
-   * @var FakerData $instance Command instance
+   * @var FakerCreate $instance Command instance
    */
   protected static $instance;
 
@@ -52,21 +52,29 @@ class FakerData extends Base {
   public function run($count = 1000) {
 
     Util::log("TESTENV: Trying to create {$count} fake contact records for this environment (" . DRUPAL_ROOT . ")...", 'ok');
+
     $spcivi = \SPCivi::getInstance();
 
     // Get custom fields
     $initialsFieldId = $spcivi->getCustomFieldId('Migratie_Contacten', 'Voorletters');
     $gemeenteFieldId = $spcivi->getCustomFieldId('Adresgegevens', 'Gemeente');
+    $buurtFieldId = $spcivi->getCustomFieldId('Adresgegevens', 'Buurt');
+    $buurtcodeFieldId = $spcivi->getCustomFieldId('Adresgegevens', 'Buurtcode');
+    $wijkcodeFieldId = $spcivi->getCustomFieldId('Adresgegevens', 'Wijkcode');
+    $manualentryFieldId = $spcivi->getCustomFieldId('Adresgegevens', 'Handmatige_invoer');
 
     // Get membership types
     $memberApi = $spcivi->api('MembershipType', 'get');
     $membershipTypes = [];
     foreach ($memberApi['values'] as $membershipType) {
-      $membershipTypes[ $membershipType['name'] ] = $membershipType;
+      $membershipTypes[$membershipType['name']] = $membershipType;
     }
 
     // Generate data!
-    for ($i = 0; $i < $count; $i ++) {
+    for ($i = 1; $i <= $count; $i ++) {
+
+      $this->faker->clearPerson();
+      $this->faker->clearAddress();
 
       // Create contact
       $contactParams = [
@@ -76,31 +84,38 @@ class FakerData extends Base {
         'display_name'               => $this->faker->name,
         'custom_' . $initialsFieldId => $this->faker->initials,
         'birth_date'                 => $this->faker->dateTimeBetween('-80 years', '-14 years')->format('Ymd'),
-        'gender_id'                  => $this->faker->gender,
+        'gender_id'                  => (int) $this->faker->gender,
       ];
 
-      Util::log(print_r($contactParams, TRUE), 'notice');
-      echo "TEST";
-      var_dump($contactParams);
-      exit;
       $contact = $spcivi->api('Contact', 'create', $contactParams);
-      if (!$contact) {
-        return Util::log("TESTENV: CiviCRM API error, could not create contact.", 'error');
+      // Util::log(print_r($contact, TRUE), 'ok');
+
+      if (!$contact || $contact['is_error']) {
+        Util::log("TESTENV: CiviCRM API error, could not create contact: " . $contact['error_message'] . ".", 'error');
+        continue;
       }
 
       // Add address (valid address including geodata so we won't have to wait for the cronjob)
       $address = $spcivi->api('Address', 'create', [
-        'contact_id'                 => $contact['id'],
-        'is_primary'                 => 1,
-        'location_type_id'           => 1,
-        'street_name'                => $this->faker->streetName,
-        'street_number'              => $this->faker->streetNumber,
-        'street_unit'                => $this->faker->streetUnit,
-        'city'                       => $this->faker->city,
-        'postal_code'                => $this->faker->postcode,
-        'custom_' . $gemeenteFieldId => $this->faker->gemeente,
-        'country_id'                 => 1152, // Nederland, of iets met CRM_Core_PseudoConstant::country()
+        'contact_id'                    => $contact['id'],
+        'is_primary'                    => 1,
+        'location_type_id'              => 1,
+        'manual_geo_code'               => 1,
+        'street_name'                   => $this->faker->streetName,
+        'street_number'                 => $this->faker->streetNumber,
+        'street_unit'                   => $this->faker->streetUnit,
+        'city'                          => strtoupper($this->faker->city),
+        'postal_code'                   => $this->faker->postcode,
+        'custom_' . $gemeenteFieldId    => strtoupper($this->faker->gemeente),
+        'custom_' . $buurtFieldId       => $this->faker->cbs_buurtnaam,
+        'custom_' . $wijkcodeFieldId    => $this->faker->cbs_wijkcode,
+        'custom_' . $buurtcodeFieldId   => $this->faker->cbs_buurtcode,
+        'custom_' . $manualentryFieldId => 0,
+        'latitude'                      => $this->faker->latitude,
+        'longitude'                     => $this->faker->longitude,
+        'country_id'                    => $this->faker->countryId,
       ]);
+      // Util::log(print_r($address, TRUE), 'ok');
 
       // Add phone number(s) (p=0.4 for home phone, p=0.7 for mobile phone)
       if ($this->faker->boolean(40)) {
@@ -110,6 +125,7 @@ class FakerData extends Base {
           'location_type_id' => 1,
           'phone_type_id'    => 1,
         ]);
+        // Util::log(print_r($phone, TRUE), 'ok');
       }
       if ($this->faker->boolean(70)) {
         $mobile = $spcivi->api('Phone', 'create', [
@@ -118,15 +134,17 @@ class FakerData extends Base {
           'location_type_id' => 1,
           'phone_type_id'    => 2,
         ]);
+        // Util::log(print_r($mobile, TRUE), 'ok');
       }
 
       // Add email address (p=0.8, always ends in example..., just to be sure)
       if ($this->faker->boolean(80)) {
         $email = $spcivi->api('Email', 'create', [
           'contact_id'       => $contact['id'],
-          'phone'            => $this->faker->safeEmail,
+          'email'            => $this->faker->safeEmail,
           'location_type_id' => 1,
         ]);
+        // Util::log(print_r($email, TRUE), 'ok');
       }
 
       // Add SP (+ ROOD) membership (p=0.9)
@@ -152,19 +170,22 @@ class FakerData extends Base {
           'contribution_status_id' => 2, // Pending
           'payment_instrument_id'  => ($this->faker->boolean(80) ? 10 : 9), // Incasso/acceptgiro, add lookup later
           'new_mandaat'            => 0,
-          'iban'                   => $this->faker->optional(0.9)->bankAccountNumber,
+          'iban'                   => $this->faker->bankAccountNumber,
+          'bic'                    => $this->faker->swiftBicNumber,
         ];
 
-        if ($membershipParams['payment_instrument_id'] == 10 && $membershipParams['iban']) {
-          $membershipData['new_mandaat'] = 1;
-          $membershipData['mandaat_status'] = 'FRST';
-          $membershipData['mandaat_datum'] = date('Ymdhis', $membershipParams['join_date']);
-          $membershipData['mandaat_plaats'] = $this->faker->city;
+        if ($membershipParams['payment_instrument_id'] == 10 && !empty($membershipParams['iban'])) {
+          $membershipParams['new_mandaat'] = 1;
+          $membershipParams['mandaat_status'] = 'FRST';
+          $membershipParams['mandaat_datum'] = $membershipParams['join_date'];
+          $membershipParams['mandaat_plaats'] = $this->faker->city;
         }
 
-        Util::log(print_r($membershipParams, TRUE), 'notice');
         $membership = $spcivi->api('Membership', 'spcreate', $membershipParams);
+        // Util::log(print_r($membership, TRUE), 'ok');
       }
+
+      Util::log("TESTENV: Created fake contact {$contact['id']} {$contactParams['display_name']} ({$i}).");
     }
 
     return Util::log("TESTENV: Finished creating fake contacts, addresses and memberships", 'ok');

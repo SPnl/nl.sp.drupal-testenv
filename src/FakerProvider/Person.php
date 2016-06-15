@@ -12,9 +12,17 @@ class Person extends \Faker\Provider\nl_NL\Person {
   private $myFirstName;
   private $myLastName;
 
-  public function gender() {
-    $this->myGender = $this->generator->biasedNumberBetween(1, 3, 'sqrt');
+  public function clearPerson() {
+    $this->myGender = NULL;
+    $this->myFirstName = NULL;
+    $this->myLastName = NULL;
+  }
 
+  public function gender() {
+    if (empty($this->myGender)) {
+      $this->myGender = $this->generator->biasedNumberBetween(1, 3, 'sqrt');
+    }
+    
     return $this->myGender;
   }
 
@@ -39,7 +47,8 @@ class Person extends \Faker\Provider\nl_NL\Person {
         $this->myFirstName = $this->firstNameMale();
         break;
       case static::GENDER_OTHER;
-        $this->myFirstName = $this->firstName();
+        // Hier zit natuurlijk die vervloekte segmentation error. !#)$*(!@$)(*!@
+        $this->myFirstName = parent::firstName();
         break;
     }
 

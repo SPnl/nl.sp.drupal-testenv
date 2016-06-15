@@ -3,5 +3,4 @@ description = Functionality to configure test environments based on the current 
 version = 1.0
 core = 7.x
 package = sprbs
-dependencies[] = xautoload
 dependencies[] = civicrm

@@ -9,7 +9,7 @@ use Testenv\Util;
  * Class CopyFiles
  * @package Testenv\Command
  */
-class UpdateSettings extends Base {
+class UpdateSettings extends BaseCommand {
 
   /**
    * @var UpdateSettings $instance Command instance
@@ -26,7 +26,7 @@ class UpdateSettings extends Base {
 
     // If run directly instead of through CreateNew, we'll ask for credentials here:
     if ($params === NULL) {
-      $params = new \StdClass;
+      $params = new \stdClass;
     }
     if (!isset($params->new_drupaldb) || !isset($params->new_cividb)) {
       drush_print('Please enter valid database credentials for the NEW Drupal and CiviCRM databases.');
@@ -219,7 +219,7 @@ class UpdateSettings extends Base {
       'org.civicoop.odoosync:username'         => '',
       'org.civicoop.odoosync:password'         => '',
       'org.civicoop.odoosync:view_partner_url' => '',
-      'mailing_backend'                        => serialize(['outBound_option' => 5]),
+      'mailing_backend'                        => ['outBound_option' => 5],
     ];
 
     $settingStatementGroup = $dbconn->prepare("UPDATE civicrm_setting SET value = :value WHERE group_name = :group_name AND name = :name");

@@ -8,7 +8,7 @@ use Testenv\Util;
  * Class FinishCopy
  * @package Testenv\Command
  */
-class FinishCopy extends Base {
+class FinishCopy extends BaseCommand {
 
   /**
    * @var FinishCopy $instance Command instance
@@ -21,7 +21,7 @@ class FinishCopy extends Base {
    * @param object $params Database settings and credentials
    * @return mixed Result
    */
-  public function run($destination, $params = null) {
+  public function run($destination, $params = NULL) {
 
     // Initialize Drush for remote installation
     chdir($destination);
@@ -48,7 +48,7 @@ class FinishCopy extends Base {
 
     // Call CiviCRM commands for new site
     Util::log('TESTENV: Updating CiviCRM config_backend.', 'ok');
-    drush_invoke_process($dstsite, 'civicrm-update-cfg'); // Tries to update config_backend automatically
+    drush_invoke_process($dstsite, 'civicrm-update-cfg'); // Tries to update config_backend automatically - this is probably implemented better in 4.6 / 4.7
 
     Util::log('TESTENV: Clearing CiviCRM caches (system.flush).', 'ok');
     drush_invoke_process($dstsite, 'civicrm-api', ['system.flush'], ['-u ' . Config::CRON_USER, '-y'], FALSE); // API command to flush cache
@@ -57,14 +57,20 @@ class FinishCopy extends Base {
     Util::log('TESTENV: Running Drupal and CiviCRM cron for your new environment.', 'ok');
     drush_invoke_process($dstsite, 'cron');
     drush_invoke_process($dstsite, 'civicrm-api', ['job.execute'], ['-u ' . Config::CRON_USER, '-y'], FALSE); // API command to run cron
-    Util::log('TESTENV: Cron has run. Please note that the crontab currently is not automatically updated.');
+    Util::log('TESTENV: Cron has run. Note that you currently have to add crontab entries for the new site yourself!', 'ok');
 
     // Set permissions for files folder to 777 just in case (got errors on testing)
+    Util::log('TESTENV: Setting permissions on /files/...', 'ok');
     drush_shell_exec("chmod -R 777 {$destination}/sites/default/files/");
 
     // Add fake data? (Only when called from CreateNew)
-    if(isset($params->faker_count) && $params->faker_count > 0) {
-        drush_invoke_process($dstsite, 'testenv-faker-data', [$params->faker_count], [], FALSE);
+    if ($params->copytype == 'replace' || $params->faker_count > 0) {
+      $method_name = ($params->copytype == 'replace' ? 'testenv-faker-replace' : 'testenv-faker-create');
+      Util::log('TESTENV: Running process ' . $method_name . ' in destination environment...', 'ok');
+
+      drush_invoke_process($dstsite, $method_name, [$params->faker_count], [], ['interactive']);
+      // drush_invoke_process in interactive mode seems to work well, an alternative would be:
+      // drush_shell_exec_interactive("drush -y -r \"{$destination}\" {$method_name} {$params->faker_count}");
     }
 
     // We're done! At last!

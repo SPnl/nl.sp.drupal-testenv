@@ -34,7 +34,7 @@ class Config {
    * @const string CIVI_KEEP_CONTACTS Keep all contacts with an id that is in this list, when copytype = basic.
    * Provisional solution that covers the SP installation for now.
    */
-  const CIVI_KEEP_CONTACTS = '1,4,6,7,8';
+  const CIVI_KEEP_CONTACTS = '1,4,6,7,8,462535';
 
   /**
    * @const string CIVI_KEEP_CONTACT_SUBTYPES Keep all contacts with a contact type that is in this list, when copytype = basic.
@@ -108,13 +108,20 @@ class Config {
       'description' => 'Perform final actions after creating a new environment, clear all caches and run cron',
       'examples'    => ['drush testenv-finish-copy /destination' => 'Finish up creating a new environment at /destination'],
     ],
-    'testenv-faker-data'       => [
+    'testenv-faker-create'    => [
       'arguments'   => [
         'destination' => 'Destination directory',
         'count'       => 'Number of new fake contacts',
       ],
-      'description' => 'Add fake contacts and Drupal users, using the Faker library',
-      'examples'    => ['drush testenv-fake-data /destination 1000' => 'Add 1000 contacts to the environment installed at /destination'],
+      'description' => 'Add fake CiviCRM contacts and members, using the Faker library',
+      'examples'    => ['drush testenv-faker-create /destination 1000' => 'Add 1000 contacts to the environment installed at /destination'],
+    ],
+    'testenv-faker-replace'   => [
+      'arguments'   => [
+        'destination' => 'Destination directory',
+      ],
+      'description' => 'Replace all sensitive CiviCRM contact data with random data, using the Faker library',
+      'examples'    => ['drush testenv-faker-replace /destination' => 'Replace contact data with fake data for the environment installed at /destination'],
     ],
   ];
 

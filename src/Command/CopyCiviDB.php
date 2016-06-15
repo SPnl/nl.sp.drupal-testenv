@@ -9,7 +9,7 @@ use Testenv\Util;
  * Class CopyCiviDB
  * @package Testenv\Command
  */
-class CopyCiviDB extends Base {
+class CopyCiviDB extends BaseCommand {
 
   /**
    * @var CopyCiviDB $instance Command instance
@@ -27,7 +27,7 @@ class CopyCiviDB extends Base {
 
     // If run directly instead of through CreateNew, we'll ask for credentials here:
     if ($params === NULL) {
-      $params = new \StdClass;
+      $params = new \stdClass;
     }
     if (!isset($params->new_username) || !isset($params->new_password)) {
       drush_print("Please enter valid database credentials for the NEW database.\n-- The username and password you enter must already exist. If the destination databases don't exist yet, this user must have the CREATE privilege. The user may temporarily need the SUPER privilege to copy CiviCRM procedures and triggers.");
@@ -41,25 +41,39 @@ class CopyCiviDB extends Base {
       return Util::log('TESTENV: copying CiviCRM database failed.', 'error');
     }
 
-    // Clean up CiviCRM database. (Not running in one transaction because that might slow down this huge operation)
+    // Clean up CiviCRM database. (Not running as one transaction because that might slow down this huge operation)
     $dbconn = Database::connection($params->new_username, $params->new_password, $new_dbname);
 
     try {
+      Util::log('TESTENV: Cleaning up CiviCRM db...', 'ok');
       $dbconn->query("SET foreign_key_checks = 0");
       $dbconn->exec("TRUNCATE TABLE civicrm_cache");
+      $dbconn->exec("TRUNCATE TABLE civicrm_acl_cache");
+      $dbconn->exec("TRUNCATE TABLE civicrm_acl_contact_cache");
+      $dbconn->exec("TRUNCATE TABLE civicrm_group_contact_cache");
       $dbconn->exec("TRUNCATE TABLE civicrm_job_log");
 
-      if ($copytype == 'basic') {
+      // Basic (empty) and replace (with fake data) copy actions: clean up logging and some other tables
+      if (in_array($copytype, ['basic', 'replace'])) {
 
-        // Remove all contacts except for admin / system accounts (and certain contact types)
-        Util::log('TESTENV: Cleaning up CiviCRM db...', 'ok');
+        Util::log("TESTENV: Truncating logging tables and cleaning up uf_match and notes tables.", 'ok');
+        $dbconn->exec("TRUNCATE TABLE civicrm_log");
+        $dbconn->exec("TRUNCATE TABLE civicrm_membership_log");
+        $dbconn->exec("TRUNCATE TABLE civicrm_odoo_sync_error_log");
+        $dbconn->exec("TRUNCATE TABLE civicrm_migration_memoria");
 
         // Clean up ufmatch, except for contacts and Drupal users we're explicitly instructed to keep
         $dbconn->exec("DELETE FROM civicrm_uf_match WHERE contact_id NOT IN (" . Config::CIVI_KEEP_CONTACTS . ") OR uf_id NOT IN (" . Config::DRUPAL_KEEP_USERS . ")");
+        $dbconn->exec("DELETE FROM civicrm_note WHERE entity_table = 'civicrm_contact' AND entity_id NOT IN (" . Config::CIVI_KEEP_CONTACTS . ")");
+      }
+
+      // Basic copy: remove all contacts except for admin / system accounts (and certain contact types)
+      // and truncate Odoo and mailing tables
+      if ($copytype == 'basic') {
 
         // Get the contact ids for all contacts we don't want to remove
         $contacts = $dbconn->query("SELECT id FROM civicrm_contact WHERE id IN (" . Config::CIVI_KEEP_CONTACTS . ") OR id IN (SELECT contact_id FROM civicrm_uf_match) OR contact_sub_type IN (" . Config::CIVI_KEEP_CONTACT_SUBTYPES . ")");
-        $contact_ids = $contacts->fetchColumn(0);
+        $contact_ids = $contacts->fetchAll(\PDO::FETCH_COLUMN, 0);
 
         Util::log("TESTENV: Removing contacts from civicrm_contact, address, phone, email, ufmatch, relationship, contribution, participant, mandaat.", 'ok');
         $dbconn->exec("DELETE FROM civicrm_contact WHERE id NOT IN (" . implode(',', $contact_ids) . ")");
@@ -73,12 +87,7 @@ class CopyCiviDB extends Base {
         $dbconn->exec("DELETE FROM civicrm_participant WHERE contact_id NOT IN (" . implode(',', $contact_ids) . ")");
         $dbconn->exec("DELETE FROM civicrm_mandaat WHERE id NOT IN (" . implode(',', $contact_ids) . ")");
 
-        Util::log("TESTENV: Truncating log, Odoo sync, financial and mailing tables.", 'ok');
-        $dbconn->exec("TRUNCATE TABLE civicrm_log");
-        $dbconn->exec("TRUNCATE TABLE civicrm_membership_log");
-        $dbconn->exec("TRUNCATE TABLE civicrm_odoo_sync_error_log");
-        $dbconn->exec("TRUNCATE TABLE civicrm_migration_memoria");
-
+        Util::log("TESTENV: Truncating Odoo sync, financial and mailing tables.", 'ok');
         $dbconn->exec("TRUNCATE TABLE civicrm_odoo_entity");
         $dbconn->exec("TRUNCATE TABLE civicrm_entity_financial_trxn");
         $dbconn->exec("TRUNCATE TABLE civicrm_line_item");
@@ -101,11 +110,11 @@ class CopyCiviDB extends Base {
         $dbconn->exec("TRUNCATE TABLE civicrm_mailing_trackable_url");
 
         // Try to remove records based on contact_id / entity_id from all tables
-
+        Util::log("TESTENV: Removing contacts from all custom field and other tables.", 'ok');
         $tables = $dbconn->query("SHOW TABLES", \PDO::FETCH_COLUMN, 0);
 
         foreach ($tables as $table) {
-          $tdescribe = $dbconn->query("DESCRIBE `{$table}`", \PDO_FETCH_COLUMN, 0);
+          $tdescribe = $dbconn->query("DESCRIBE `{$table}`", \PDO::FETCH_COLUMN, 0);
           if (!$tdescribe) {
             continue;
           }
@@ -119,8 +128,7 @@ class CopyCiviDB extends Base {
           } elseif (in_array('entity_id', $tcolnames) && strpos($table, 'civicrm_value_') === 0) {
 
             // If table contains entity_id, check if it is in civicrm_custom_group.
-            $cgroup = $dbconn->prepare("SELECT * FROM civicrm_custom_group WHERE table_name = ? AND extends IN (?)");
-            $cgroup->execute([1 => $table, 2 => ['Contact', 'Individual', 'Organization']]);
+            $cgroup = $dbconn->query("SELECT * FROM civicrm_custom_group WHERE table_name = '{$table}' AND extends IN ('Individual','Contact')");
             if ($cgroup->rowCount() > 0) {
 
               Util::log("TESTENV: Removing records by entity_id from custom field group table '{$table}'.", 'info');
@@ -153,7 +161,7 @@ class CopyCiviDB extends Base {
       return drush_set_error('DB_EMPTY', 'TESTENV: No destination database specified.');
     }
     if (!empty($type) && !in_array($type, ['basic', 'full'])) {
-      return drush_set_Error('DB_INVALIDTYPE', 'TESTENV: Invalid copy type, should be \'basic\' or \'full\'.');
+      return drush_set_error('DB_INVALIDTYPE', 'TESTENV: Invalid copy type, should be \'basic\' or \'full\'.');
     }
   }
 

@@ -7,7 +7,7 @@ use Testenv\Util;
  * Class CopyFiles
  * @package Testenv\Command
  */
-class CopyFiles extends Base {
+class CopyFiles extends BaseCommand {
 
   /**
    * @var CopyFiles $instance Command instance
@@ -23,13 +23,13 @@ class CopyFiles extends Base {
 
     // Call drush core-rsync to perform the actual sync... can't get this to work with drush_invoke_process, so doing this instead for now
     chdir(DRUPAL_ROOT);
-    $drushret = drush_shell_exec_interactive('drush rsync @self ' . $destination . ' -y --include-conf --exclude-paths="sites/default/files/civicrm/templates_c/:sites/default/files/civicrm/ConfigAndLog/*:sites/default/files/css/*:sites/default/files/js/*:"');
+    $drushret = drush_shell_exec_interactive('drush -y rsync @self ' . $destination . ' --include-conf --exclude-paths="sites/default/files/civicrm/templates_c/:sites/default/files/civicrm/ConfigAndLog/*:sites/default/files/css/*:sites/default/files/js/*:"');
 
     if (empty($drushret) || $drushret['error_status'] == 1) {
-      return Util::log("\nTESTENV: drush rsync failed.", 'error');
+      return Util::log("TESTENV: drush rsync failed.", 'error');
     }
 
-    return Util::log("\nTESTENV: finished copying files.", 'ok');
+    return Util::log("TESTENV: finished copying files.", 'ok');
   }
 
   /**

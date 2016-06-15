@@ -9,7 +9,7 @@ use Testenv\Util;
  * Class CopyDrupalDB
  * @package Testenv\Command
  */
-class CopyDrupalDB extends Base {
+class CopyDrupalDB extends BaseCommand {
 
   /**
    * @var CopyDrupalDB $instance Command instance
@@ -27,7 +27,7 @@ class CopyDrupalDB extends Base {
 
     // If run directly instead of through CreateNew, we'll ask for credentials here:
     if ($params === NULL) {
-      $params = new \StdClass;
+      $params = new \stdClass;
     }
     if (!isset($params->new_username) || !isset($params->new_password)) {
       drush_print("Please enter valid database credentials for the NEW database.\n-- The username and password you enter must already exist. If the destination databases don't exist yet, this user must have the CREATE privilege.");
@@ -51,7 +51,7 @@ class CopyDrupalDB extends Base {
       $dbconn->exec("TRUNCATE TABLE sessions");
       $dbconn->exec("TRUNCATE TABLE watchlog");
 
-      if ($copytype == 'basic') {
+      if (in_array($copytype, ['basic','replace'])) {
         // Remove non-admin users from system tables -> dit soort SP-specifieke config maken we later nog wel variabel
 
         Util::log('TESTENV: Cleaning up Drupal db, removing most user and profile records...', 'ok');

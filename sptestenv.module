@@ -6,8 +6,3 @@
  *  Drush commands and validators are defined in sptestenv.drush.inc.
  *  All other logic is in /src/.
  * -------------------------------------------------------------------------- */
-
-/**
- * Function to implement hook_xautoload(). Not currently needed - we're loading Xautoload in the Drush init function.
- * function sptestenv_xautoload($adapter) { $adapter->add('Testenv\\', 'src/'); }
- */

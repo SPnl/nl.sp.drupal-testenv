@@ -47,9 +47,16 @@ class Database {
     // Clean up any SQL files that may have been left in /tmp
     drush_op_system("rm -f /tmp/sptestenv_copy_*.sql");
 
-    // Dump current database to system temp directory. Dump options currently hardcoded. Probably should be escaped, too.
+    // Dump current database to system temp directory. Dump options are currently hardcoded. The sed command fixes definer permission issues and adds SQL to speed up dump import.
     $dumpfile = Util::getTempDir() . DIRECTORY_SEPARATOR . 'sptestenv_copy_' . time() . '.sql';
-    $dumpcmd = Config::MYSQLDUMP_LOCATION . " -u {$params->cur_username} -p{$params->cur_password} -f --create-options --routines --triggers --skip-events --single-transaction --max-allowed-packet=32M {$cur_dbname} > {$dumpfile}";
+    $mysqldumpopts = "-u {$params->cur_username} -p{$params->cur_password} -f --create-options --add-drop-database --add-drop-table --routines --triggers --skip-events --single-transaction --max-allowed-packet=64M {$cur_dbname}";
+
+    $dumpcmd_before = "/* Added by import script: */ SET FOREIGN_KEY_CHECKS = 0; SET UNIQUE_CHECKS = 0; SET AUTOCOMMIT = 0;";
+    $dumpcmd_after = "/* Added by import script: */ SET FOREIGN_KEY_CHECKS = 1; SET UNIQUE_CHECKS = 1; SET AUTOCOMMIT = 1; COMMIT;";
+    $sedcmd = "sed -e 's/DEFINER[ ]*=[]*[^*]*\\*/\\*/' -e '1i {$dumpcmd_before}' -e '\$a {$dumpcmd_after}'";
+
+    // This is the actual command
+    $dumpcmd = Config::MYSQLDUMP_LOCATION . " " . $mysqldumpopts . " | " . $sedcmd . " > " . $dumpfile;
 
     Util::log("Dumping database '{$cur_dbname}' to {$dumpfile}...", 'ok');
     Util::log("Calling command: '{$dumpcmd}'.\n", 'debug'); // debug only
@@ -89,7 +96,7 @@ class Database {
   public static function currentInfo(&$params) {
 
     if (empty($params) || !is_object($params)) {
-      $params = new \StdClass;
+      $params = new \stdClass;
     }
 
     global $databases;
