@@ -244,7 +244,7 @@ class UpdateSettings extends BaseCommand {
 
     // Add word replacement to make extra extra obvious what environment we're in
     $dbconn->prepare("INSERT INTO civicrm_word_replacement SET find_word = :search, replace_word = :replace, is_active = :is_active, match_type = :match_type, domain_id = :domain_id")
-      ->execute(['search' => 'CiviCRM-startpagina', 'replace' => 'CiviCRM (' . $params->sitename . ')', 'is_active' => 1, 'match_type' => 'exactMatch', 'domain_id' => 1]);
+      ->execute(['search' => 'CiviCRM Home', 'replace' => 'CiviCRM (' . $params->sitename . ')', 'is_active' => 1, 'match_type' => 'exactMatch', 'domain_id' => 1]);
 
     return TRUE;
   }
