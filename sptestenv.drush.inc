@@ -60,12 +60,12 @@ function drush_sptestenv_testenv_finish_copy($destination) {
 	return \Testenv\Command\FinishCopy::get()->run($destination);
 }
 
-function drush_sptestenv_testenv_faker_create($destination, $count = 1000) {
-	return \Testenv\Command\FakerCreate::get()->run($destination, $count);
+function drush_sptestenv_testenv_faker_create($count = 1000) {
+	return \Testenv\Command\FakerCreate::get()->run($count);
 }
 
-function drush_sptestenv_testenv_faker_replace($destination) {
-  return \Testenv\Command\FakerReplace::get()->run($destination);
+function drush_sptestenv_testenv_faker_replace() {
+  return \Testenv\Command\FakerReplace::get()->run();
 }
 
 /* ----- VALIDATORS (provisional calls) ----- */
@@ -94,10 +94,10 @@ function drush_sptestenv_testenv_finish_copy_validate($destination = '') {
   return \Testenv\Command\FinishCopy::get()->validate($destination);
 }
 
-function drush_sptestenv_testenv_faker_create_validate($destination = '', $count = 1000) {
-  return \Testenv\Command\FakerCreate::get()->validate($destination, $count);
+function drush_sptestenv_testenv_faker_create_validate($count = 1000) {
+  return \Testenv\Command\FakerCreate::get()->validate($count);
 }
 
-function drush_sptestenv_testenv_faker_replace_validate($destination = '') {
-  return \Testenv\Command\FakerReplace::get()->validate($destination);
+function drush_sptestenv_testenv_faker_replace_validate() {
+  return \Testenv\Command\FakerReplace::get()->validate();
 }

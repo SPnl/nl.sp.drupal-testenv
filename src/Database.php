@@ -23,12 +23,12 @@ class Database {
   public static function connection($username, $password, $database = NULL) {
 
     $keyname = !empty($database) ? $database : 'general';
-    if (empty(self::$conn[ $keyname ])) {
+    if (empty(self::$conn[$keyname])) {
       $dsn = 'mysql:host=' . Config::DB_HOST . ($database ? ';dbname=' . $database : '');
-      self::$conn[ $keyname ] = new \PDO($dsn, $username, $password);
+      self::$conn[$keyname] = new \PDO($dsn, $username, $password);
     }
 
-    return self::$conn[ $keyname ];
+    return self::$conn[$keyname];
   }
 
   /**
@@ -70,22 +70,36 @@ class Database {
     $dbconn = self::connection($params->new_username, $params->new_password);
     $query = $dbconn->prepare("CREATE DATABASE IF NOT EXISTS :database")->execute(['database' => $new_dbname]);
 
-    // Try to read dumpfile
-    $readcmd = Config::MYSQL_LOCATION . " -D {$new_dbname} -u {$params->new_username} -p{$params->new_password} -f < {$dumpfile}";
-
-    Util::log("Importing database '{$new_dbname}' from {$dumpfile}...", 'ok');
-    Util::log("Calling command: '{$readcmd}'.\n", 'debug'); // debug only
-
-    $readres = drush_shell_exec($readcmd, TRUE);
-
-    // Remove dump file
+    // Execute dump file
+    $readres = self::runSQLFile($new_dbname, $params->new_username, $params->new_password, $dumpfile);
     unlink($dumpfile);
 
     if (!$readres) {
       return Util::log("TESTENV: could not read dump file for database '{$new_dbname}'.", 'error');
     }
-
     return TRUE;
+  }
+
+  /**
+   * Import an SQL dump file with the credentials provided
+   * @param string $dbname Database name
+   * @param string $username Username
+   * @param string $password Password
+   * @param string $dumpfile Dumpfile location
+   * @return bool Success
+   */
+  public static function runSQLFile($dbname, $username, $password, $dumpfile) {
+    if (empty($dumpfile)) {
+      return FALSE;
+    }
+
+    // Try to import dumpfile
+    $readcmd = Config::MYSQL_LOCATION . " -D {$dbname} -u {$username} -p{$password} -f < {$dumpfile}";
+
+    Util::log("Importing database '{$dbname}' from {$dumpfile}...", 'ok');
+    Util::log("Calling command: '{$readcmd}'.\n", 'debug'); // debug only
+
+    return drush_shell_exec($readcmd, TRUE);
   }
 
   /**

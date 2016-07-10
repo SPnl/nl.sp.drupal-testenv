@@ -8,9 +8,9 @@ class MobilePhone extends \Faker\Provider\PhoneNumber
     '06-########',
   );
 
-  public static function mobilePhone()
+  public function mobilePhone()
   {
-    return static::phoneNumber();
+    return $this->phoneNumber();
   }
 
 }

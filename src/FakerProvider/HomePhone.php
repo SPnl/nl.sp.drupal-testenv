@@ -17,8 +17,8 @@ class HomePhone extends \Faker\Provider\PhoneNumber {
     '088-#######',
   );
 
-  public static function homePhone()
+  public function homePhone()
   {
-    return static::phoneNumber();
+    return $this->phoneNumber();
   }
 }

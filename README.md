@@ -24,15 +24,14 @@ Improvements that could / should be made:
 
 Functional:
 - Make all code and configuration dynamic and non-SP-specific  
-      (there are some hardcoded options as well as a list of (pseudo)constants in Testenv\Config)
+      (there are some hardcoded options as well as a list of (pseudo)constants in Testenv\Config, and quite a lot of specific table / field references in the Faker* classes)
 - SP-specific: maybe make some changes to the Drupal front page automatically  
     (changing and removing some panels, like at civicrm-cursus)
 - Keep some more existing users and data, depending on the user's preferences
-- Filter the right user / contact data before copying the database (data we don't want is currently removed *after* copying - but filtering using --where in mysqldump will probably be difficult)
-- FakerCreate/FakerReplace performance could likely be improved by using direct queries instead of CiviCRM API requests (some actions could perhaps be completely handled in MySQL - e.g. UPDATE civicrm_address SELECT FROM civicrm_postcodenl ...)  
+- FakerReplace now uses database queries, FakerCreate still uses the API and would perform better if it also queried the database directly
 
 Random data:
-- Replace IBAN accounts and SEPA mandates with random data
+- Replace all SP specific table and field references with something more flexible and non-SP-specific 
 - Remove or replace activities, relationships, and participants with random data
 - Remove or replace contributions (both member and event related)
 - Keep Drupal user accounts and/or update them accordingly
@@ -42,4 +41,4 @@ Nerd stuff:
 - Improve the FakerCreate and FakeReplace command classes and make them less repetitive 
 - Convert the $param array that's being tossed around into something like a ParameterBag
 - Improve command output in general, and fix my random use of drush_log/_print and error levels
-- Call commands and validators using a hook instead of the functions currently in sptestenv.drush.inc
+- Add commands and validators using a hook instead of the functions currently in sptestenv.drush.inc

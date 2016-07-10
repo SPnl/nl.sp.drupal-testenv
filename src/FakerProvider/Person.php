@@ -22,7 +22,7 @@ class Person extends \Faker\Provider\nl_NL\Person {
     if (empty($this->myGender)) {
       $this->myGender = $this->generator->biasedNumberBetween(1, 3, 'sqrt');
     }
-    
+
     return $this->myGender;
   }
 
@@ -67,9 +67,21 @@ class Person extends \Faker\Provider\nl_NL\Person {
     return $this->firstName($gender) . ' ' . $this->lastName();
   }
 
+  public function sortName($gender = NULL) {
+    return $this->lastName() . ', ' . $this->firstName($gender);
+  }
+
   public function initials($gender = NULL) {
     $firstname = $this->firstName($gender);
     return strtoupper(substr($firstname, 0, 1));
+  }
+
+  public function contactAddressee($gender = NULL) {
+    return $this->initials($gender) . ' ' . $this->lastName();
+  }
+
+  public function contactGreeting($gender = NULL) {
+    return 'Beste ' . $this->firstName($gender);
   }
 
 }
