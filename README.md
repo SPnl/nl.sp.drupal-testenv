@@ -42,6 +42,7 @@ Random data:
 - Remove or replace activities, relationships, and participants with random data
 - Remove or replace contributions (both member and event related)
 - Keep Drupal user accounts and/or update them accordingly
+
 See the internal Google Docs file for more possible improvements.
 
 Nerd stuff:

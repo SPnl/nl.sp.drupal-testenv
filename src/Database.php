@@ -45,7 +45,7 @@ class Database {
     }
 
     // Clean up any SQL files that may have been left in /tmp
-    drush_op_system("rm -f /tmp/sptestenv_copy_*.sql");
+    drush_op_system("rm -f ".Util::getTempDir() . DIRECTORY_SEPARATOR."sptestenv_copy_*.sql");
 
     // Dump current database to system temp directory. Dump options are currently hardcoded. The sed command fixes definer permission issues and adds SQL to speed up dump import.
     $dumpfile = Util::getTempDir() . DIRECTORY_SEPARATOR . 'sptestenv_copy_' . time() . '.sql';
