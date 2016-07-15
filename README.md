@@ -19,16 +19,23 @@ This module adds the following Drush commands:
 - **drush testenv-faker-replace <destination> <count>** - Replace all contacts with random fake data, using the Faker library (run in the *destination* environment!)
 
 
+Faker library:
+--------------
+The last two commands require the Faker library ([fzaninotto/faker](https://github.com/fzaninotto/Faker)). If you have the [composer_manager](https://www.drupal.org/project/composer_manager) module installed, the library can be easily installed and updated because of the included composer.json file.  
+If you do not wish to use composer_manager, you'll need to download the Faker library yourself, add it to your libraries directory and make it available through an autoloader. 
+
+
 Improvements that could / should be made:
 -----------------------------------------
 
 Functional:
-- Make all code and configuration dynamic and non-SP-specific  
+- Make all code and configuration dynamic and non-SP-specific
       (there are some hardcoded options as well as a list of (pseudo)constants in Testenv\Config, and quite a lot of specific table / field references in the Faker* classes)
-- SP-specific: maybe make some changes to the Drupal front page automatically  
+- SP-specific: maybe make some changes to the Drupal front page automatically
     (changing and removing some panels, like at civicrm-cursus)
 - Keep some more existing users and data, depending on the user's preferences
 - FakerReplace now uses database queries, FakerCreate still uses the API and would perform better if it also queried the database directly
+- We could add the database and an installation database user automatically, if the user provides a root login
 
 Random data:
 - Replace all SP specific table and field references with something more flexible and non-SP-specific 

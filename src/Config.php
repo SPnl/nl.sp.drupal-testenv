@@ -28,13 +28,13 @@ class Config {
    * @const string DRUPAL_KEEP_USERS Delete all users with an id that is not in this list, when copytype = basic.
    * Provisional solution that covers the SP installation for now.
    */
-  const DRUPAL_KEEP_USERS = '0,1,11,12,19,72';
+  const DRUPAL_KEEP_USERS = '0,1,11,12,19,72,73,74,76,109,111';
 
   /**
    * @const string CIVI_KEEP_CONTACTS Keep all contacts with an id that is in this list, when copytype = basic.
    * Provisional solution that covers the SP installation for now.
    */
-  const CIVI_KEEP_CONTACTS = '1,4,6,7,8,462535';
+  const CIVI_KEEP_CONTACTS = '1,4,6,7,8,34252,37436,462535,762754,807085,807088';
 
   /**
    * @const string CIVI_KEEP_CONTACT_SUBTYPES Keep all contacts with a contact type that is in this list, when copytype = basic.

@@ -1,0 +1,7 @@
+{
+	"name": "civicoop/sp-drupal-testenv",
+	"description": "Functionality to configure test environments based on the current production version, and fill new environments with sample data. Requires the Faker library.",
+	"require": {
+		"fzaninotto/faker": "^1.5"
+	}
+}
