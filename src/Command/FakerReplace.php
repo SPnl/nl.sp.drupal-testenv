@@ -187,6 +187,7 @@ class FakerReplace extends BaseCommand {
       contact_id NOT IN (' . Config::CIVI_KEEP_CONTACTS . ')');
     while($email->fetch()) {
 
+      $this->faker->clearPerson();
       $equery = "UPDATE civicrm_email SET
                   email = '" . $this->escapeString($this->faker->safeEmail) . "'
                  WHERE id = " . (int)$email->id;
