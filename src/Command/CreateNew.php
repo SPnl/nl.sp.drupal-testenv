@@ -109,14 +109,14 @@ class CreateNew extends BaseCommand {
     $params->new_username = drush_prompt('Database username', basename($params->destination));
     $params->new_password = drush_prompt('Database password', NULL, TRUE, TRUE);
     $params->copytype = drush_choice([
-      'full' => 'Full (including all data)',
-      'basic' => 'Basic (users and contact data are removed)',
+      'full'    => 'Full (including all data)',
+      'basic'   => 'Basic (users and contact data are removed)',
       'replace' => 'Replace (contact data is replaced by random data)',
     ], 'Copy type');
 
     // Ask about Faker data
     $params->faker_count = 0;
-    if($params->copytype == 'basic') {
+    if ($params->copytype == 'basic') {
       drush_print("After the test environment has been created, this script can automatically create fake sample data in your locale.\nType the number of fake contact records you wish to create, or '0' to add no fake data.");
       $params->faker_count = drush_prompt('Number of fake contacts to create', 0, FALSE, FALSE);
       if (!is_numeric($params->faker_count)) {

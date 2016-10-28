@@ -32,20 +32,20 @@ class Database {
   }
 
   /**
-   * Shared function to copy an entire database by calling mysqldump / mysql via drush_shell_exec.
+   * Shared function to dump an entire database by calling mysqldump via drush_shell_exec.
+   * Copy function split up into dump and import function to allow for dumping databases only.
    * @param string $cur_dbname Current database
-   * @param string $new_dbname Destination database
    * @param object $params Database credentials and settings
-   * @return bool Result
+   * @return string|bool Dumpfile name, or false
    */
-  public static function copy($cur_dbname, $new_dbname, &$params) {
+  public static function dump($cur_dbname, &$params) {
 
     if (!Util::isDrush()) {
-      return Util::log('TESTENV: Database::copy can currently only be called via Drush.', 'error');
+      return Util::log('TESTENV: Database::dump can currently only be called via Drush.', 'error');
     }
 
     // Clean up any SQL files that may have been left in /tmp
-    drush_op_system("rm -f ".Util::getTempDir() . DIRECTORY_SEPARATOR."sptestenv_copy_*.sql");
+    drush_op_system("rm -f " . Util::getTempDir() . DIRECTORY_SEPARATOR . "sptestenv_copy_*.sql");
 
     // Dump current database to system temp directory. Dump options are currently hardcoded. The sed command fixes definer permission issues and adds SQL to speed up dump import.
     $dumpfile = Util::getTempDir() . DIRECTORY_SEPARATOR . 'sptestenv_copy_' . time() . '.sql';
@@ -63,20 +63,40 @@ class Database {
 
     $dumpres = drush_shell_exec($dumpcmd, TRUE);
     if (!$dumpres || !file_exists($dumpfile)) {
-      return Util::log("TESTENV: could not dump current database '{$cur_dbname}'.", 'error');
+      Util::log("TESTENV: could not dump current database '{$cur_dbname}'.", 'error');
+      return FALSE;
     }
 
-    // Try to create new database, if it doesn't exist
+    return $dumpfile;
+  }
+
+  /**
+   * Shared function to import a database dump by calling mysql via drush_shell_exec.
+   * Copy function split up into dump and import function to allow for dumping databases only.
+   * @param string $new_dbname Destination database
+   * @param string $dumpfile Dumpfile name
+   * @param object $params Database credentials and settings
+   * @return bool Success
+   */
+  public static function import($new_dbname, $dumpfile, &$params) {
+
+    if (!Util::isDrush()) {
+      return Util::log('TESTENV: Database::import can currently only be called via Drush.', 'error');
+    }
+
+    // Try to create new database, if it doesn't exist (only possible when root credentials are supplied)
     $dbconn = self::connection($params->new_username, $params->new_password);
-    $query = $dbconn->prepare("CREATE DATABASE IF NOT EXISTS :database")->execute(['database' => $new_dbname]);
+    $dbconn->prepare("CREATE DATABASE IF NOT EXISTS :database")->execute(['database' => $new_dbname]);
 
     // Execute dump file
     $readres = self::runSQLFile($new_dbname, $params->new_username, $params->new_password, $dumpfile);
     unlink($dumpfile);
 
     if (!$readres) {
-      return Util::log("TESTENV: could not read dump file for database '{$new_dbname}'.", 'error');
+      Util::log("TESTENV: could not read dump file for database '{$new_dbname}' ({$dumpfile}).", 'error');
+      return FALSE;
     }
+
     return TRUE;
   }
 
@@ -117,6 +137,7 @@ class Database {
     $conf = reset($databases);
     $thisdb = reset($conf);
     if (empty($thisdb) || empty($thisdb['username']) || empty($thisdb['password']) || empty($thisdb['database']) || empty($thisdb['prefix']['civicrm_contact'])) {
+      Util::log('Error: could not get database credentials or CiviCRM tables prefix. Check if both are defined in settings.php.', 'error');
       return FALSE;
     }
 

@@ -45,7 +45,7 @@ class Config {
   /**
    * @const string ENV_BASE_URL Default base url for a test environment.
    */
-  const ENV_BASE_URL = 'https://civicrmnew.sp.nl/';
+  const ENV_BASE_URL = 'https://civicrmtstacc.sp.nl/';
 
   /**
    * @const string DEFAULT_THEME_PATH Path to default theme relative to Drupal root, without trailing slash.
@@ -93,6 +93,13 @@ class Config {
       ],
       'description' => 'Copy this site\'s CiviCRM database',
       'examples'    => ['drush testenv-copy-cividb newenv_cividb' => 'Copy current CiviCRM database to newenv_cividb'],
+    ],
+    'testenv-dumpdb' => [
+      'arguments'   => [
+        'dumppath' => 'Path where mysql dump files will be stored',
+      ],
+      'description' => 'Dump this site\'s Drupal and CiviCRM databases to .sql files, without creating a new site',
+      'examples'    => ['drush testenv-dumpdb' => 'Dump current databases'],
     ],
     'testenv-update-settings' => [
       'arguments'   => [

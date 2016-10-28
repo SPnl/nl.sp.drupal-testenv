@@ -35,14 +35,23 @@ class CopyDrupalDB extends BaseCommand {
       $params->new_password = drush_prompt('Database password', NULL, TRUE, TRUE);
     }
 
+    // Connect to database and create it if necessary
+    $dbconn = Database::connection($params->new_username, $params->new_password);
+    $dbconn->exec("CREATE DATABASE IF NOT EXISTS `{$new_dbname}`");
+    $dbconn->exec("USE `{$new_dbname}`");
+
     // Copy database
     Database::currentInfo($params);
-    if (!Database::copy($params->cur_drupaldb, $new_dbname, $params)) {
-      return Util::log('TESTENV: copying Drupal database failed.', 'error');
+    $dumpfile = Database::dump($params->cur_drupaldb, $params);
+    if (!$dumpfile) {
+      return Util::log('TESTENV: dumping Drupal database failed.', 'error');
+    }
+    $impres = Database::import($new_dbname, $dumpfile, $params);
+    if (!$impres) {
+      return Util::log('TESTENV: creating new Drupal database failed.', 'error');
     }
 
     // Clean up Drupal database
-    $dbconn = Database::connection($params->new_username, $params->new_password, $new_dbname);
     $dbconn->beginTransaction();
 
     try {
@@ -51,7 +60,7 @@ class CopyDrupalDB extends BaseCommand {
       $dbconn->exec("TRUNCATE TABLE sessions");
       $dbconn->exec("TRUNCATE TABLE watchlog");
 
-      if (in_array($copytype, ['basic','replace'])) {
+      if (in_array($copytype, ['basic', 'replace'])) {
         // Remove non-admin users from system tables -> dit soort SP-specifieke config maken we later nog wel variabel
 
         Util::log('TESTENV: Cleaning up Drupal db, removing most user and profile records...', 'ok');

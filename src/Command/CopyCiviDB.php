@@ -35,14 +35,24 @@ class CopyCiviDB extends BaseCommand {
       $params->new_password = drush_prompt('Database password', NULL, TRUE, TRUE);
     }
 
+    // Connect to database and create it if necessary
+    $dbconn = Database::connection($params->new_username, $params->new_password);
+    $dbconn->exec("CREATE DATABASE IF NOT EXISTS `{$new_dbname}`");
+    $dbconn->exec("USE `{$new_dbname}`");
+
     // Copy database
     Database::currentInfo($params);
-    if (!Database::copy($params->cur_cividb, $new_dbname, $params)) {
-      return Util::log('TESTENV: copying CiviCRM database failed.', 'error');
+    $dumpfile = Database::dump($params->cur_cividb, $params);
+    if (!$dumpfile) {
+      return Util::log('TESTENV: dumping CiviCRM database failed.', 'error');
+    }
+    $impres = Database::import($new_dbname, $dumpfile, $params);
+    if (!$impres) {
+      return Util::log('TESTENV: creating new CiviCRM database failed.', 'error');
     }
 
-    // Clean up CiviCRM database. (Not running as one transaction because that might slow down this huge operation)
-    $dbconn = Database::connection($params->new_username, $params->new_password, $new_dbname);
+    // Clean up CiviCRM database.
+    // (Not running as one transaction because that might slow down this huge operation)
 
     try {
       Util::log('TESTENV: Cleaning up CiviCRM db...', 'ok');

@@ -5,8 +5,8 @@
  * -------------------------------------------------------------------------- */
 
 /* ----- DEVELOPMENT ONLY ----- */
-define('DEBUG', true);
-if(defined('DEBUG') && DEBUG == true) {
+define('DEBUG', TRUE);
+if (defined('DEBUG') && DEBUG == TRUE) {
   ini_set('display_errors', 'on');
   ini_set('display_startup_errors', 'on');
   error_reporting(E_ALL & ~E_NOTICE & ~E_STRICT);
@@ -37,31 +37,35 @@ function sptestenv_drush_command() {
 /* ----- COMMANDS (provisional calls) ----- */
 
 function drush_sptestenv_testenv_new() {
-	return \Testenv\Command\CreateNew::get()->run();
+  return \Testenv\Command\CreateNew::get()->run();
 }
 
 function drush_sptestenv_testenv_copy_files($destination) {
-	return \Testenv\Command\CopyFiles::get()->run($destination);
+  return \Testenv\Command\CopyFiles::get()->run($destination);
 }
 
 function drush_sptestenv_testenv_copy_drupaldb($new_dbname, $copytype = 'basic') {
-	return \Testenv\Command\CopyDrupalDB::get()->run($new_dbname, $copytype);
+  return \Testenv\Command\CopyDrupalDB::get()->run($new_dbname, $copytype);
 }
 
 function drush_sptestenv_testenv_copy_cividb($new_dbname, $copytype = 'basic') {
-	return \Testenv\Command\CopyCiviDB::get()->run($new_dbname, $copytype);
+  return \Testenv\Command\CopyCiviDB::get()->run($new_dbname, $copytype);
+}
+
+function drush_sptestenv_testenv_dumpdb($dumppath) {
+  return \Testenv\Command\DumpDB::get()->run($dumppath);
 }
 
 function drush_sptestenv_testenv_update_settings($destination) {
-	return \Testenv\Command\UpdateSettings::get()->run($destination);
+  return \Testenv\Command\UpdateSettings::get()->run($destination);
 }
 
 function drush_sptestenv_testenv_finish_copy($destination) {
-	return \Testenv\Command\FinishCopy::get()->run($destination);
+  return \Testenv\Command\FinishCopy::get()->run($destination);
 }
 
 function drush_sptestenv_testenv_faker_create($count = 1000) {
-	return \Testenv\Command\FakerCreate::get()->run($count);
+  return \Testenv\Command\FakerCreate::get()->run($count);
 }
 
 function drush_sptestenv_testenv_faker_replace() {
@@ -84,6 +88,10 @@ function drush_sptestenv_testenv_copy_drupaldb_validate($new_dbname = '', $copyt
 
 function drush_sptestenv_testenv_copy_cividb_validate($new_dbname = '', $copytype = NULL) {
   return \Testenv\Command\CopyCiviDB::get()->validate($new_dbname, $copytype);
+}
+
+function drush_sptestenv_testenv_dumpdb_validate($dumppath = NULL) {
+  return \Testenv\Command\DumpDB::get()->validate($dumppath);
 }
 
 function drush_sptestenv_testenv_update_settings_validate($destination = '') {

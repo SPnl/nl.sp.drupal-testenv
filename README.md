@@ -13,6 +13,7 @@ This module adds the following Drush commands:
 - **drush testenv-copy-files <destination>** - Copy this site's files to a new testing environment at /destination
 - **drush testenv-copy-drupaldb <new_db> <copytype>** - Copy this site's Drupal database
 - **drush testenv-copy-cividb <new_db> <copytype>** - Copy this site's CiviCRM database
+- **drush testenv-dumpdb <destination>** - Generate SQL dumps for both databases, that can be imported on another server
 - **drush testenv-update-settings <destination>** - Modify Drupal / CiviCRM settings files and tables for a newly created environment
 - **drush testenv-finish-copy <destination>** - Perform final actions after creating a new environment, clear all caches and run cron  
 - **drush testenv-faker-create <destination> <count>** - Add fake contacts, using the Faker library (run in the *destination* environment!)

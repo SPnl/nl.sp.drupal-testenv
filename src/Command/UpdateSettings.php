@@ -106,6 +106,7 @@ class UpdateSettings extends BaseCommand {
     $settingsPath = $path . '/sites/default/settings.php';
     $settingsFile = file_get_contents($settingsPath);
 
+    // Replace database credentials (new: added limit=1, UF integration block was replaced too)
     $settingsFile = preg_replace('/^\$databases(.*);/imsU', "\$databases = [
       'default' => [ 'default' => [
         'database' => '{$params->new_drupaldb}',
@@ -113,13 +114,13 @@ class UpdateSettings extends BaseCommand {
         'password' => '{$params->new_password}',
         'host'     => 'localhost',
         'driver'   => 'mysql',
-      ], ], ];", $settingsFile);
+      ], ], ];", $settingsFile, 1);
     $settingsFile = preg_replace('/^\$drupal_hash_salt = [\'"](.*)[\'"];/imsU', "\$drupal_hash_salt = '" . bin2hex(openssl_random_pseudo_bytes(32)) . "';", $settingsFile);
     $settingsFile = preg_replace('/^\$base_url = [\'"](.*)[\'"];/imsU', "\$base_url = '{$params->url}';", $settingsFile);
 
-    if (!empty($params->old_civicrmdb)) {
+    if (!empty($params->cur_cividb)) {
       // UF integration - CiviCRM database name may occur in Drupal settings.php
-      $settingsFile = str_replace("`{$params->old_civicrmdb}`", "`{$params->new_cividb}`", $settingsFile);
+      $settingsFile = str_replace("`{$params->cur_cividb}`", "`{$params->new_cividb}`", $settingsFile);
     }
 
     return file_put_contents($settingsPath, $settingsFile);

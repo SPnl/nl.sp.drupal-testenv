@@ -21,7 +21,7 @@ class Util {
    * Uses watchdog in other environments (turn on debugging to see all messages, such as notices).
    * @param $string
    * @param string $type
-   * @return mixed
+   * @return bool
    */
   public static function log($string, $type = 'ok') {
     if (is_array($string)) {
@@ -29,10 +29,11 @@ class Util {
     }
     if (static::isDrush()) {
       $type = ($type == 'debug' ? 'notice' : $type);
-      return drush_log(date('[Y-m-d H:i:s] ') . $string, $type);
+      drush_log(date('[Y-m-d H:i:s] ') . $string, $type);
     } else {
-      return watchdog('sptestenv', $string, $type);
+      watchdog('sptestenv', $string, $type);
     }
+    return ($type == 'ok');
   }
 
   /**
